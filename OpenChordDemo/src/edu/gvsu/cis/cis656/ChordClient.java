@@ -89,6 +89,10 @@ public class ChordClient {
 	}
 
 	public void insertResource(String key, Serializable resource){
+    	RegistrationInfo reg = this.retrieveResource(key);
+    	if (reg != null){
+    		this.removeResource(key, reg);
+		}
         try {
             StringKey myKey = new StringKey(key);
             this.chord.insert(myKey, resource);

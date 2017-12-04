@@ -48,8 +48,77 @@ public class App
             serverSocket = new ServerSocket(0);
             userPort = serverSocket.getLocalPort(); // Update port to serversocket port
             // Start listening for messages
-            Thread thread = new Thread(new TextListener(serverSocket, username));
+            RegistrationInfo reg = new RegistrationInfo(username, userHost, userPort, true);
+            Thread thread = new Thread(new TextListener(serverSocket, reg));
             thread.start();
+
+            System.out.println("User host: " + userHost);
+            System.out.println("User port: " + userPort);
+            // Startup client (registration)
+
+            App.startup(client, reg);
+
+
+            // STARTED!
+            System.out.println("Welcome " + username + ".");
+            System.out.print((char) 27 + "[38;5;118m" + username + " ➜ " + (char) 27 + "[0m");
+            while (true) {
+                // Read inputs to Run chat
+                Scanner reader = new Scanner(System.in);
+                String clInput = reader.nextLine();
+                String[] inputParts = clInput.split("\\s");
+                // Verify first word of the input to know what to do...
+                switch (inputParts[0]) {
+                    case "exit":
+                        System.out.println("Exiting...");
+                        App.removeUser(client, reg);
+                        System.exit(0);
+                        break;
+                    case "available":
+                        if (reg.getStatus() == true) {
+                            System.out.println("You are already available.");
+                        } else {
+                            App.updateUserStatus(client, reg, true);
+                            reg.setStatus(true);
+                            System.out.println("Status changed to available.");
+                        }
+                        System.out.print((char) 27 + "[38;5;118m" + username + " ➜ " + (char) 27 + "[0m");
+                        break;
+                    case "busy":
+                        if (reg.getStatus() == false) {
+                            System.out.println("You are already not available.");
+                        } else {
+                            App.updateUserStatus(client, reg, false);
+                            reg.setStatus(false);
+                            System.out.println("Status changed to busy.");
+                        }
+                        System.out.print((char) 27 + "[38;5;118m" + username + " ➜ " + (char) 27 + "[0m");
+                        break;
+                    case "talk":
+                        if (inputParts.length < 3) {
+                            System.out.println("Command to send message seems to be malformed. Try again.");
+                        } else {
+                            RegistrationInfo user = App.lookForAUser(client, inputParts[1]);
+                            if (user == null) {
+                                System.out.println("User does not exists.");
+                            } else {
+                                if (user.getUserName().equals(reg.getUserName()) || !user.getStatus()) {
+                                    System.out.println("User is not available");
+                                } else {
+                                    String message = App.joinString(2, inputParts); // Removing first two words from input to only get message
+                                    message = reg.getUserName() + " says ➜ " + message;
+                                    App.sendMessage(user.getHost(), user.getPort(), message);
+                                }
+                            }
+                        }
+                        System.out.print((char) 27 + "[38;5;118m" + username + " ➜ " + (char) 27 + "[0m");
+                        break;
+                    default:
+                        System.out.println((char) 27 + "[38;5;88mCommand not detected. Try again!" + (char) 27 + "[0m");
+                        System.out.print((char) 27 + "[38;5;118m" + username + " ➜ " + (char) 27 + "[0m");
+                        break;
+                }
+            }
         } catch (UnknownHostException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -57,70 +126,7 @@ public class App
             e.printStackTrace();
         }
 
-        System.out.println("User host: " + userHost);
-        System.out.println("User port: " + userPort);
-        // Startup client (registration)
-        RegistrationInfo reg = new RegistrationInfo(username, userHost, userPort, true);
-        App.startup(client, reg);
 
-        // STARTED!
-        System.out.println("Welcome " + username + ".");
-        System.out.print((char)27 + "[38;5;118m"+ username + " ➜ " + (char)27 + "[0m");
-        while (true) {
-            // Read inputs to Run chat
-            Scanner reader = new Scanner(System.in);
-            String clInput = reader.nextLine();
-            String[] inputParts = clInput.split("\\s");
-            // Verify first word of the input to know what to do...
-            switch (inputParts[0]) {
-                case "exit":
-                    System.out.println("Exiting...");
-                    App.removeUser(client, reg);
-                    System.exit(0);
-                    break;
-                case "available":
-                    if (reg.getStatus() == true) {
-                        System.out.println("You are already available.");
-                    } else {
-                        App.updateUserStatus(client, reg, true);
-
-                    }
-                    System.out.print((char)27 + "[38;5;118m"+ username + " ➜ " + (char)27 + "[0m");
-                    break;
-                case "busy":
-                    if (reg.getStatus() == false) {
-                        System.out.println("You are already not available.");
-                    } else {
-                        App.updateUserStatus(client, reg, false);
-
-                    }
-                    System.out.print((char)27 + "[38;5;118m"+ username + " ➜ " + (char)27 + "[0m");
-                    break;
-                case "talk":
-                    if (inputParts.length < 3) {
-                        System.out.println("Command to send message seems to be malformed. Try again.");
-                    } else {
-                        RegistrationInfo user = App.lookForAUser(client, inputParts[1]);
-                        if (user == null) {
-                            System.out.println("User does not exists.");
-                        } else {
-                            if (user.getUserName().equals(reg.getUserName()) || !user.getStatus()) {
-                                System.out.println("User is not available");
-                            } else {
-                                String message = App.joinString(2, inputParts); // Removing first two words from input to only get message
-                                message = reg.getUserName() + " says ➜ " + message;
-                                App.sendMessage(user.getHost(), user.getPort(), message);
-                            }
-                        }
-                    }
-                    System.out.print((char)27 + "[38;5;118m"+ username + " ➜ " + (char)27 + "[0m");
-                    break;
-                default:
-                    System.out.println((char) 27 + "[38;5;88mCommand not detected. Try again!" + (char) 27 + "[0m");
-                    System.out.print((char) 27 + "[38;5;118m" + username + " ➜ " + (char) 27 + "[0m");
-                    break;
-            }
-        }
     }
 
     // Auxiliar function to format message before send it.
