@@ -102,8 +102,17 @@ public class ChordClient {
     }
 
     public void removeResource(String key, RegistrationInfo resource){
+        RegistrationInfo rsc = null;
         try {
             StringKey myKey = new StringKey(key);
+            Set<Serializable> vals = this.chord.retrieve(myKey);
+            Iterator<Serializable> it = vals.iterator();
+            while(it.hasNext()) {
+                rsc = (RegistrationInfo) it.next();
+                if (rsc.getUserName().equals(resource.getUserName())) {
+                    this.chord.remove(myKey, resource);
+                }
+            }
             this.chord.remove(myKey, resource);
         } catch (ServiceException e) {
             e.printStackTrace();
