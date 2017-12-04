@@ -1,7 +1,5 @@
 package edu.gvsu.cis.cis656.client;
 
-import edu.gvsu.cis.cis656.ChordClient;
-
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetAddress;
@@ -12,16 +10,12 @@ import java.util.Scanner;
 import java.util.Vector;
 import java.util.Arrays;
 
-/**
- * Hello world!
- *
- */
 public class App
 {
     public static void main( String[] args )
     {
-        if(args.length != 2) {
-            System.out.println("usage:\n\tjava ChordClient -master|-notmaster bootstrap-host");
+        if(args.length != 4) {
+            System.out.println("usage:\n\tjava ChordClient -master|-notmaster bootstrap-host username port");
             return;
         }
         boolean theMaster = args[0].intern() == "-master" ? true: false;
@@ -33,14 +27,14 @@ public class App
         if (args.length >= 2 && args[1] != null) {
             host = args[1];
         }
-        if (args.length >= 3 && args[2] != null){
-            port = Integer.parseInt(args[2]);
+        if (args.length >= 3 && args[3] != null){
+            port = Integer.parseInt(args[3]);
         }
 
         /*
          * Registriation section
          */
-        String username = args[0]; // Save username coming from start process
+        String username = args[2]; // Save username coming from start process
         // Sockets!
         // -------- To listen "socket"
         ServerSocket serverSocket = null;
@@ -67,7 +61,7 @@ public class App
         System.out.println("User port: " + userPort);
         // Startup client (registration)
         RegistrationInfo reg = new RegistrationInfo(username, userHost, userPort, true);
-        App.startup(restClient, reg);
+        App.startup(client, reg);
 
         // STARTED!
         System.out.println("Welcome " + username + ".");
@@ -81,14 +75,15 @@ public class App
             switch (inputParts[0]) {
                 case "exit":
                     System.out.println("Exiting...");
-                    App.removeUser(restClient, reg);
+                    App.removeUser(client, reg);
                     System.exit(0);
                     break;
                 case "available":
                     if (reg.getStatus() == true) {
                         System.out.println("You are already available.");
                     } else {
-                        App.updateUserStatus(restClient, reg, true);
+                        App.updateUserStatus(client, reg, true);
+
                     }
                     System.out.print((char)27 + "[38;5;118m"+ username + " ➜ " + (char)27 + "[0m");
                     break;
@@ -96,31 +91,16 @@ public class App
                     if (reg.getStatus() == false) {
                         System.out.println("You are already not available.");
                     } else {
-                        App.updateUserStatus(restClient, reg, false);
+                        App.updateUserStatus(client, reg, false);
+
                     }
                     System.out.print((char)27 + "[38;5;118m"+ username + " ➜ " + (char)27 + "[0m");
-                    break;
-                case "broadcast":
-                    if (inputParts.length < 2) {
-                        System.out.println("Command to send message seems to be malformed. Try again.");
-                    } else {
-                        Vector<RegistrationInfo> friends = App.listFriends(restClient);
-                        Vector<RegistrationInfo> friendsAvailable = new Vector<>();
-                        for (RegistrationInfo user : friends) {
-                            if (user.getStatus() && !user.getUserName().equals(reg.getUserName())) {
-                                String message = App.joinString(1, inputParts);//clInput.substring(clInput.indexOf(' ')+1); // Removing first word from input to only get message
-                                message = reg.getUserName() + " says ➜ " + message;
-                                App.sendMessage(user.getHost(), user.getPort(), message);
-                            }
-                        }
-                        System.out.print((char)27 + "[38;5;118m"+ username + " ➜ " + (char)27 + "[0m");
-                    }
                     break;
                 case "talk":
                     if (inputParts.length < 3) {
                         System.out.println("Command to send message seems to be malformed. Try again.");
                     } else {
-                        RegistrationInfo user = App.lookForAUser(restClient, inputParts[1]);
+                        RegistrationInfo user = App.lookForAUser(client, inputParts[1]);
                         if (user == null) {
                             System.out.println("User does not exists.");
                         } else {
@@ -132,22 +112,6 @@ public class App
                                 App.sendMessage(user.getHost(), user.getPort(), message);
                             }
                         }
-                    }
-                    System.out.print((char)27 + "[38;5;118m"+ username + " ➜ " + (char)27 + "[0m");
-                    break;
-                case "friends":
-                    Vector<RegistrationInfo> onlineFriends = App.listFriends(restClient);
-                    System.out.println((char)27 + "[38;5;251m----------------" + (char)27 + "[0m");
-                    System.out.println((char)27 + "[38;5;251mOnline friends:" + (char)27 + "[0m");
-                    System.out.println((char)27 + "[38;5;251m----------------" + (char)27 + "[0m");
-                    String status = "";
-                    for (RegistrationInfo user : onlineFriends) {
-                        if (user.getStatus()) {
-                            System.out.println((char)27 + "[38;5;84m✓ " + user.getUserName() + " (Available)" + (char)27 + "[0m");
-                        } else {
-                            System.out.println((char)27 + "[38;5;94m✗ " + user.getUserName() + " (Busy)" + (char)27 + "[0m");
-                        }
-
                     }
                     System.out.print((char)27 + "[38;5;118m"+ username + " ➜ " + (char)27 + "[0m");
                     break;
@@ -211,7 +175,6 @@ public class App
     // Update status
     public static void updateUserStatus(PresenceService service, RegistrationInfo reg, Boolean newStatus){
         try {
-            reg.setStatus(!reg.getStatus());
             service.setStatus(reg, newStatus);
         } catch (Exception e) {
             System.err.println("updateRegistrationInfo exception:");

@@ -1,6 +1,5 @@
 package edu.gvsu.cis.cis656.client;
 
-import com.sun.org.apache.regexp.internal.RE;
 import edu.gvsu.cis.cis656.ChordClient;
 
 public class ConnectionHandler implements PresenceService {
@@ -35,10 +34,11 @@ public class ConnectionHandler implements PresenceService {
     }
 
     @Override
-    public void setStatus(String userName, boolean status) throws Exception {
-        RegistrationInfo resource = this.chordCLient.retrieveResource(userName);
+    public void setStatus(RegistrationInfo reg, boolean status) throws Exception {
+        RegistrationInfo resource = this.chordCLient.retrieveResource(reg.getUserName());
         if (resource != null){
-            this.chordCLient.insertResource(resource.getUserName(), status);
+            resource.setStatus(status);
+            this.chordCLient.insertResource(resource.getUserName(), resource);
         }
     }
 
